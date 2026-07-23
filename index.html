@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>E-RPH Portal</title>
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 font-sans min-h-screen p-4 md:p-8">
@@ -36,7 +35,6 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Subject Dropdown -->
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Subject</label>
                         <select id="subject" required class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white">
@@ -54,7 +52,6 @@
                             <option value="Pendidikan Muzik">Pendidikan Muzik</option>
                         </select>
                     </div>
-                    <!-- Class Dropdown -->
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Class / Grade</label>
                         <select id="className" required class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white">
@@ -85,13 +82,19 @@
                     <textarea id="reflection" rows="3" required class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="How did the lesson go?"></textarea>
                 </div>
 
+                <!-- FILE UPLOAD FIELD -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Attach File (Optional: PDF, Word, Image)</label>
+                    <input type="file" id="fileInput" class="w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer border border-gray-300 rounded-lg p-2">
+                </div>
+
                 <button type="submit" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200 shadow-md">
                     Submit E-RPH
                 </button>
             </form>
         </div>
 
-        <!-- PRINCIPAL / ADMIN PORTAL -->
+        <!-- PRINCIPAL PORTAL -->
         <div id="adminView" class="hidden bg-white shadow-xl rounded-2xl p-6 md:p-8 border border-gray-100">
             <div class="flex justify-between items-center mb-6">
                 <div>
@@ -108,14 +111,10 @@
     </div>
 
     <script>
-        // =========================================================================
-        // ⚠️ REPLACE THE LINK BELOW WITH YOUR GOOGLE APPS SCRIPT WEB APP URL ⚠️
-        // =========================================================================
-        const scriptUrl = 'https://script.google.com/macros/s/AKfycbwT0bQGnMgcbopWbeY-bbPhA7APOVTVpylkDlFA2uPvttdXuVzuAzgaUeeRdEyTpdxj/exec';
-        
-        const ADMIN_PIN = "1234"; // Default Principal PIN to unlock admin portal
+        // REPLACE WITH YOUR GOOGLE APPS SCRIPT WEB APP URL
+        const scriptUrl = 'https://script.google.com/macros/s/AKfycbyOQUp-Dhar4hJJUwEifVjlw1H-htTzbsj1epYa-MzVJp49wep4PG6uPA9mf2lZskFA/exec';
+        const ADMIN_PIN = "1234";
 
-        // Tab Switcher Function
         function switchTab(tab) {
             const teacherView = document.getElementById('teacherView');
             const adminView = document.getElementById('adminView');
@@ -141,12 +140,12 @@
             }
         }
 
-        // Form Submit Listener
+        // Form Submission with File Conversion
         document.getElementById('erphForm').addEventListener('submit', function(e) {
             e.preventDefault();
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.disabled = true;
-            submitBtn.innerText = 'Submitting...';
+            submitBtn.innerText = 'Uploading & Submitting...';
 
             const payload = {
                 teacherName: document.getElementById('teacherName').value,
@@ -158,6 +157,25 @@
                 reflection: document.getElementById('reflection').value
             };
 
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const base64Data = e.target.result.split(',')[1];
+                    payload.fileName = file.name;
+                    payload.fileType = file.type;
+                    payload.fileData = base64Data;
+                    sendData(payload, submitBtn);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                sendData(payload, submitBtn);
+            }
+        });
+
+        function sendData(payload, submitBtn) {
             fetch(scriptUrl, {
                 method: 'POST',
                 mode: 'no-cors',
@@ -171,17 +189,17 @@
                 submitBtn.innerText = 'Submit E-RPH';
             })
             .catch(err => {
-                alert('Submission error. Please check your web app URL.');
+                alert('Submission error. Please check your network or web app URL.');
                 console.error(err);
                 submitBtn.disabled = false;
                 submitBtn.innerText = 'Submit E-RPH';
             });
-        });
+        }
 
-        // Load Submissions into Admin Panel
+        // Admin Table View
         function loadAdminData() {
             const adminContent = document.getElementById('adminContent');
-            adminContent.innerHTML = '<p class="text-blue-600 font-semibold animate-pulse">Loading records from Google Sheets...</p>';
+            adminContent.innerHTML = '<p class="text-blue-600 font-semibold animate-pulse">Loading records...</p>';
 
             fetch(scriptUrl)
                 .then(res => res.json())
@@ -197,6 +215,7 @@
                                 <th class="p-3">Teacher</th>
                                 <th class="p-3">Wk/Sub/Class</th>
                                 <th class="p-3">Objectives & Activities</th>
+                                <th class="p-3">Attachment</th>
                                 <th class="p-3">Status</th>
                                 <th class="p-3">Action</th>
                             </tr>
@@ -210,6 +229,10 @@
                             ? '<span class="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-bold">Rejected</span>'
                             : '<span class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-bold">Pending</span>';
 
+                        const fileButton = item.fileUrl 
+                            ? `<a href="${item.fileUrl}" target="_blank" class="px-2.5 py-1 bg-blue-100 text-blue-700 rounded text-xs font-semibold hover:bg-blue-200 inline-block">📎 View File</a>`
+                            : `<span class="text-gray-400 text-xs">No File</span>`;
+
                         html += `<tr>
                             <td class="p-3 font-semibold text-gray-800">${item.teacherName}</td>
                             <td class="p-3 text-xs text-gray-600">Wk ${item.week}<br>${item.subject}<br><b>${item.className}</b></td>
@@ -218,6 +241,7 @@
                                 <b>Act:</b> ${item.activities}<br>
                                 <b>Ref:</b> ${item.reflection}
                             </td>
+                            <td class="p-3">${fileButton}</td>
                             <td class="p-3">${statusBadge}</td>
                             <td class="p-3 space-x-1">
                                 <button onclick="updateStatus(${item.rowIndex}, 'Approved')" class="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700">Approve</button>
@@ -230,11 +254,10 @@
                     adminContent.innerHTML = html;
                 })
                 .catch(err => {
-                    adminContent.innerHTML = '<p class="text-red-500">Error fetching data. Ensure Google Sheet is accessible.</p>';
+                    adminContent.innerHTML = '<p class="text-red-500">Error fetching data.</p>';
                 });
         }
 
-        // Action function to update row status
         function updateStatus(rowIndex, newStatus) {
             fetch(scriptUrl, {
                 method: 'POST',
